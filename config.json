@@ -1,0 +1,9 @@
+{
+  "http": {
+    "cors": {
+      "origin": "*",
+      "methods": "GET,HEAD,POST,PUT,DELETE,OPTIONS",
+      "headers": "*"
+    }
+  }
+}

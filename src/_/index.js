@@ -1,0 +1,19 @@
+const proc = require('./proc');
+const microservices = require('./microservices');
+const nats = require('./nats');
+const log = require('./log');
+const http = require('./http');
+const controller = require('./controller');
+
+module.exports.http = http;
+module.exports.microservices = microservices;
+module.exports.add = microservices.add;
+module.exports.remove = microservices.remove;
+module.exports.connect = controller.connect;
+module.exports.log = log.log;
+module.exports.subscribe = nats.subscribe;
+module.exports.request = nats.request;
+module.exports.publish = nats.publish;
+module.exports.reply = http.reply;
+module.exports.http = http.request;
+module.exports.maskSensitive = log.maskSensitive;
