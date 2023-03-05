@@ -5,7 +5,8 @@
   "license": "MIT",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "run-from-cli": "node src/index.js"
   },
   "engines": {
     "npm": "9.3.1",
