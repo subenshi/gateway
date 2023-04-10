@@ -9,10 +9,11 @@
     "run-from-cli": "node src/index.js"
   },
   "engines": {
-    "npm": "9.3.1",
-    "node": "18.14.0"
+    "npm": "9.5.0",
+    "node": "18.15.0"
   },
   "dependencies": {
+    "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "nats": "^2.11.0"
