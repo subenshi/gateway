@@ -74,7 +74,6 @@ module.exports.verify = headers => {
         data += chunk;
       });
       res.on('end', () => {
-        console.log(data, statusCode)
         if (statusCode !== 200) {
           return resolve(null);
         }

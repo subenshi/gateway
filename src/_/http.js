@@ -1,5 +1,6 @@
 // Start http server
 const express = require('express');
+const bodyParser = require('body-parser')
 const URL = require('url');
 const app = express()
 
@@ -22,7 +23,8 @@ try {
 
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+// parse application/json
+app.use(bodyParser.json())
 
 module.exports.reply = (res, response) => {
   if (response.code) {
@@ -95,7 +97,7 @@ module.exports.connect = (cb) => {
     // Apply CORS config based on config.json
     if (config.http?.cors) {
       log.log('http', 'cors', config.http.cors);
-      var cors = require('cors')
+      const cors = require('cors')
       app.use(cors(config.http.cors));
     }
 
@@ -113,7 +115,6 @@ module.exports.connect = (cb) => {
 
       const microservice = micros.filter(ms => ms.config && ms.config.http).find(ms => {
         const { http } = ms.config;
-        console.log({ http, pathname, method })
         return http.pathname === pathname && 
                http.method === method;
       });
@@ -127,7 +128,13 @@ module.exports.connect = (cb) => {
 
       let user = null;
       if (authentication) {
-        user = await this.authenticateRequest(authentication, req.headers)
+        try {
+          user = await this.authenticateRequest(authentication, req.headers)
+        }
+        catch (e) {
+          log.log('http', 'route.401', pathname);
+          return res.status(401).send();
+        }
       }
 
       const uuid = crypto.uuid();
