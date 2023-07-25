@@ -83,12 +83,10 @@ module.exports.request = async (topic, message, opts) => {
     })
     .catch((err) => {
       message.application.to = package.name;
-      message.error = {
-        code: err.code === 'TIMEOUT' ? 408 : 505,
-        data: {
-          error: err.code === 'TIMEOUT' ? 'Request timed out' : 'Server error',
-        }
-      };
+      message.properties = {
+        statusCode: err.code === 'TIMEOUT' ? 408 : 505,
+      }
+      message.payload = err.code === 'TIMEOUT' ? 'Request timed out' : 'Server error';
       throw message;
     });
 }

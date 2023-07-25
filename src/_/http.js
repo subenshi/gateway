@@ -9,6 +9,7 @@ const crypto = require('./crypto');
 const package = require('./package');
 const microservices = require('./microservices');
 const addons = require('./addons');
+const validator = require('./validator');
 
 let server;
 
@@ -26,11 +27,29 @@ const PORT = process.env.PORT || 3000;
 // parse application/json
 app.use(bodyParser.json())
 
-module.exports.reply = (res, response) => {
-  if (response.code) {
-    res.status(response.code);
+module.exports.reply = (res, message) => {
+  const { properties } = message;
+  const { statusCode, headers } = properties;
+
+  if (statusCode) {
+    res.status(statusCode);
   }
-  res.send(response.data || {});
+
+  if (headers) {
+    Object.keys(headers).forEach(key => {
+      res.setHeader(key, headers[key]);
+    })
+  }
+  
+  const { payload } = message;
+
+  if (payload) {
+    res.send(payload);
+  }
+  else {
+    console.log(message)
+    res.send('ok');
+  }
 }
 
 requestCallback = null;
@@ -88,6 +107,38 @@ module.exports.authenticateRequest = async (authentication, headers) => {
   
 }
 
+module.exports.getParams = (route, url) => {
+  let params = {
+    required: [],
+    list: {}
+  };
+
+  // For a URL like /api/v1/users/1/roles/2
+  // and a route like /api/v1/users/:userId/roles/:roleId
+  // we want to get the params like { userId: 1, roleId: 2 }
+
+  // Split the URL and the route into arrays
+  const urlParts = url.pathname.split('/');
+  const routeParts = route.split('/');
+
+  // Loop through the route parts
+  routeParts.forEach((part, index) => {
+    // If the part starts with a colon, it's a param
+    if (part.startsWith(':')) {
+      // Get the param name
+      const paramName = part.replace(':', '');
+      // Get the param value from the URL
+      const paramValue = urlParts[index];
+      // Add the param to the list
+      params.list[paramName] = paramValue;
+      // Add the param to the required list
+      params.required.push(paramName);
+    }
+  });
+
+  return params;
+}
+
 module.exports.connect = (cb) => {
   return new Promise((resolve, reject) => {
 
@@ -113,10 +164,60 @@ module.exports.connect = (cb) => {
       const { pathname } = URL.parse(url);
       // Find the microservice that is gatewaying this URL
 
+      let route = null;
+      let params = {};
+
+      const parse = URL.parse(url);
+      
+      log.log('http', 'route', parse.pathname);
+
       const microservice = micros.filter(ms => ms.config && ms.config.http).find(ms => {
         const { http } = ms.config;
-        return http.pathname === pathname && 
-               http.method === method;
+
+        const match = http.find(route => {
+          const routePathname = parse.pathname;
+          if (route.method !== method) {
+            // log.log('http', 'route', `${routePathname} ${route.method} != ${method}`);
+            return false
+          };
+
+          let _params = this.getParams(route.pathname, parse);
+
+          if (!_params.required.length) {
+            return route.pathname === routePathname
+          }
+
+          log.log('http', 'route', `${route.pathname} ${routePathname}`);
+          console.log({ _params })
+
+          if (_params.required.length) {
+            let finalPath = parse.pathname;
+            
+            // Remove falsy values from _params.list
+            Object.keys(_params.list).forEach(key => {
+              if (!_params.list[key]) {
+                delete _params.list[key];
+              }
+            })
+
+            // Replace the params with the values from the URL
+            Object.keys(_params.list).forEach(key => {
+              finalPath = finalPath.replace(_params.list[key], `:${key}`)
+            })
+
+            if (finalPath === route.pathname) {
+              params = _params.list;
+              return true;
+            } 
+          }
+
+          return false
+        })
+
+        if (match) {
+          route = match;
+          return true;
+        }
       });
 
       if (!microservice) {
@@ -137,19 +238,36 @@ module.exports.connect = (cb) => {
         }
       }
 
+      // Perform validation 
+      const { validate } = route;
+      if (validate) {
+        // The required fields to be validated
+        // as per the config.json of the http microservice
+        const { body, query } = validate;
+        try {
+          // if (body) validator(body, req.body);
+          if (query) validator(query, req.query);
+        }
+        catch (e) {
+          return res.status(400).send(e.message);
+        }
+      }
+
       const uuid = crypto.uuid();
 
       const natsMessage = {
         uuid,
+        operation: route.operationId,
         application: {
           from: package.name,
           to: microservice.name,
         },
-        payload: { url, method, query, body, headers, user },
+        payload: { url, method, query, params, body, headers, user },
         original: {
           uuid,
           application: 'gateway',
           url: pathname,
+          routerId: route.routerId,
           timestamp
         },
         timestamp

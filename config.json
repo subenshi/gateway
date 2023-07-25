@@ -3,7 +3,8 @@
     "cors": {
       "origin": "*",
       "methods": "GET,HEAD,POST,PUT,DELETE,OPTIONS",
-      "headers": "*"
+      "headers": "*",
+      "exposedHeaders": "X-Total-Count"
     }
   }
 }

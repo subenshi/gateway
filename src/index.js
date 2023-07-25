@@ -21,6 +21,9 @@ _.connect(() => {
   // Subscribe to the microservice discovery topic
   _.subscribe('nats.discovery', (m, microservice) => {
     const { status } = microservice;
+
+    if (status) console.log(JSON.stringify(microservice, null, 2))
+
     if (status) _.add(microservice)
     if (!status) _.remove(microservice)
   })
@@ -30,14 +33,14 @@ _.connect(() => {
 
   // Received HTTP request from client
   _.http((natMessage, res) => {
-
     // Send the request to the microservice
     _.request(natMessage.application.to, natMessage, { timeout: 5000 })
       // and send the response back to the gateway's client
-      .then(reply => {
-        _.reply(res, reply.payload)
+      .then(message => {
+        _.reply(res, message)
       }) // Send the response back to the gateway's client
-      .catch(replyError => _.reply(res, replyError.error));
+      .catch(replyError => {
+        _.reply(res, replyError)
+      });
   })
-
 })
